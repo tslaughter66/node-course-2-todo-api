@@ -37,7 +37,7 @@ app.get('/todos', (req, res) => {
     res.send({todos});
   }, (e) => {
     res.status(400).send(e);
-  })
+  });
 })
 
 // tell web app to start listening on the given port.
