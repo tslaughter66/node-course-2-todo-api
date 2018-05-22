@@ -14,7 +14,7 @@ var app = express();
 // Configure Middleware
 app.use(bodyParser.json());
 
-// Create a new Todo from request body text using POST. Send back 200 and new doc.
+// POST - Create a new Todo from request body text. Send back 200 and new doc.
 // If error, send back 400 and error message.
 app.post('/todos',(req, res) => {
   var todo = new Todo({
@@ -26,6 +26,19 @@ app.post('/todos',(req, res) => {
     res.status(400).send(e);
   });
 });
+
+// GET - return all todos.
+app.get('/todos', (req, res) => {
+  // Get todos using the find() methods.
+  // "then" promise requires two functions as arguments -> success case and failure case
+  Todo.find().then((todos) => {
+    // instead of just passing back "todos" as an array, pass back an object with the todos array on it.
+    // this future-proofs the call so that we can add more return values later if we want.
+    res.send({todos});
+  }, (e) => {
+    res.status(400).send(e);
+  })
+})
 
 // tell web app to start listening on the given port.
 app.listen(3000, () => {
