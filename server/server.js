@@ -1,6 +1,7 @@
 // Require - 3rd Party
 var express = require('express');
 var bodyParser = require('body-parser');
+const {ObjectId} = require('mongodb');
 
 // Require - local
 // mongod.exe --dbpath /Users/Tim/mongo-data
@@ -39,6 +40,29 @@ app.get('/todos', (req, res) => {
     res.status(400).send(e);
   });
 })
+
+// GET - return a specific todo
+// using ":id" creates an id varible in the request object based on the parameters passed in the url
+app.get('/todos/:id', (req,res) => {
+  var id = req.params.id;         // get the id from the url request
+
+  // validate Id using ObjectId.isValid. If not valid, return 404 and empty response.
+  if( !ObjectId.isValid(id) ) {
+    return res.status(404).send();
+  }
+
+  // use findById to get the todo.
+  Todo.findById(id).then((todo) => {
+    // if no todo found - send back 404 with empty body
+    if( !todo ) {
+      return res.status(404).send();
+    }
+    // if the todo exists, send it back.
+    res.send({todo});
+  }).catch((e) => {
+    res.status(400).send();// error with find. send back 400 and empty response
+  });
+});
 
 // tell web app to start listening on the given port.
 app.listen(3000, () => {
