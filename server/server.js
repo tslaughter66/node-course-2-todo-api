@@ -11,6 +11,8 @@ var {User} = require('./model/user');
 
 // create the web application using express
 var app = express();
+// set up a PORT argument. If deployed, will use heroku port, otherwise, local.
+const port = process.env.PORT || 3000;
 
 // Configure Middleware
 app.use(bodyParser.json());
@@ -65,8 +67,8 @@ app.get('/todos/:id', (req,res) => {
 });
 
 // tell web app to start listening on the given port.
-app.listen(3000, () => {
-  console.log('Started on port 3000');
+app.listen(port, () => {
+  console.log(`Started up at port ${port}`);
 });
 
 module.exports = {app};
