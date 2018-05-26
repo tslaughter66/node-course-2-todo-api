@@ -1,3 +1,6 @@
+// Set up the config file.
+require('./config/config');
+
 // Require - 3rd Party
 const _ = require('lodash');
 const express = require('express');
@@ -13,7 +16,7 @@ var {User} = require('./model/user');
 // create the web application using express
 var app = express();
 // set up a PORT argument. If deployed, will use heroku port, otherwise, local.
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 // Configure Middleware
 app.use(bodyParser.json());
