@@ -1,6 +1,7 @@
 // Require - 3rd Party
-var express = require('express');
-var bodyParser = require('body-parser');
+const _ = require('lodash');
+const express = require('express');
+const bodyParser = require('body-parser');
 const {ObjectId} = require('mongodb');
 
 // Require - local
@@ -85,6 +86,43 @@ app.delete('/todos/:id', (req,res) => {
     res.send({todo});
   }).catch((e) => {
     res.status(400).send();// error with find. send back 400 and empty response
+  });
+});
+
+// PATCH - update a todo.
+app.patch('/todos/:id', (req,res) => {
+  var id = req.params.id;
+  //use lodash module to get parameters from body. Only want user to be able to update some properties.
+  var body = _.pick(req.body, ['text','completed']);
+
+  // validate Id using ObjectId.isValid. If not valid, return 404 and empty response.
+  if( !ObjectId.isValid(id) ) {
+    return res.status(404).send();
+  }
+
+  // Check if the completed param is a boolean and if it is true.
+  if(_.isBoolean(body.completed) && body.completed) {
+    // If boolean and true, add the completedAt timestamp.
+    body.completedAt = new Date().getTime();
+  } else {
+    // If it is not boolean or not true, set completed to false and clear completedAt
+    body.completed = false;
+    body.completedAt = null;
+  }
+
+  // Update the todo in the datbase.
+  // Pass in the body object since it now contains all fields we want to pass in.
+  // "new" param means mongoose will return the updated todo.
+  Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((todo) => {
+    // If todo doesn't exist, send 404
+    if(!todo) {
+      return res.status(404).send();
+    }
+
+    // Everything went as expected. Send todo back.
+    res.send({todo});
+  }).catch((e) => {
+    res.status(400).send();
   });
 });
 
