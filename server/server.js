@@ -12,6 +12,7 @@ const {ObjectId} = require('mongodb');
 var {mongoose} = require('./db/mongoose.js');
 var {Todo} = require('./model/todo');
 var {User} = require('./model/user');
+var {authenticate} = require('./middleware/authenticate');
 
 // create the web application using express
 var app = express();
@@ -144,6 +145,12 @@ app.post('/users',(req,res) => {
   }).catch((e) => {
     res.status(400).send(e);
   })
+});
+
+// GET - get a user based on a passed in authToken
+app.get('/users/me', authenticate, (req,res) => {
+  // Get the user off the request and send it back. user added to request by authenticate method.
+  res.send(req.user);
 });
 
 // tell web app to start listening on the given port.

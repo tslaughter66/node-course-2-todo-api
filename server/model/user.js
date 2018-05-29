@@ -59,6 +59,26 @@ UserSchema.methods.generateAuthToken = function () {
   });
 };
 
+UserSchema.statics.findByToken = function (token) {
+  var User = this;      // get the userSchema, not an individual user
+  var decoded;
+
+  try {
+    // try to get the verified token.
+    decoded = jwt.verify(token,'abc123');
+  } catch (e) {
+    // If verify fails, send a reject promise. Whatever method calls this method will go to the "catch" in their method.
+    return Promise.reject();
+  }
+
+  // if the decoded was successful, call findOne.
+  return User.findOne({
+    '_id': decoded._id,
+    'tokens.token': token,    // Query a sub-structure by wrapping in quotes.
+    'tokens.access': 'auth'
+  });
+};
+
 // create the User model that mongoose will use to insert.
 var User = mongoose.model('User', UserSchema);
 
