@@ -1,7 +1,8 @@
-const mongoose = require('mongoose');
+const mongoose  = require('mongoose');
 const validator = require('validator');
-const jwt = require('jsonwebtoken');
-const _ = require('lodash');
+const jwt       = require('jsonwebtoken');
+const _         = require('lodash');
+const bcrypt    = require('bcryptjs');
 
 // Schema is how you want your mongodb document set up.
 // Using schemas allows you to add instance methods to schemas
@@ -78,6 +79,24 @@ UserSchema.statics.findByToken = function (token) {
     'tokens.access': 'auth'
   });
 };
+
+// Mongoose middleware. "pre" means to run the code before a certain event (first parameter)
+UserSchema.pre('save', function (next) {
+  var user = this;
+
+  if (user.isModified('password')) {
+    // if the password was modified, hash and save.
+    bcrypt.genSalt(10, (err, salt) => {
+      bcrypt.hash(user.password, salt, (err, hash) => {
+        user.password = hash;
+        next();
+      });
+    });
+  } else {
+    // not modified, just move on.
+    next();
+  }
+});
 
 // create the User model that mongoose will use to insert.
 var User = mongoose.model('User', UserSchema);
