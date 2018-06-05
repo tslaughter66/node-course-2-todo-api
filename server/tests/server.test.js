@@ -4,26 +4,12 @@ const {ObjectID} = require('mongodb');
 
 const {app} = require('./../server');
 const {Todo} = require('./../model/todo');
-
-// Make up an array of dummy todos to fill database for /GET.
-const todos = [{
-  _id: new ObjectID(),
-  text: 'First test todo'
-}, {
-  _id: new ObjectID(),
-  text: 'Second test todo',
-  completed: true,
-  completedAt: 333
-}];
+const {User} = require('./../model/user');
+const {todos, populateTodos, users, populateUsers} = require('./seed/seed');
 
 // Add testing lifecycle method to prep db for test cases
-beforeEach((done) => {
-  // .remove clears the database
-  Todo.remove({}).then(() => {
-    // insertMany() inserts the todos created above
-    return Todo.insertMany(todos);
-  }).then(() => done())
-});
+beforeEach(populateUsers);
+beforeEach(populateTodos);
 
 // Create a describe block to group the tests together
 describe('POST /todos', () => {
@@ -185,3 +171,77 @@ describe('PATCH /todos/:id', () => {
       .end(done);
   });
 });
+
+describe('GET /users/me', () => {
+  it('should return user if authenticated', (done) => {
+    request(app)
+      .get('/users/me')
+      .set('x-auth',users[0].tokens[0].token)               // .set method sets values in the header.
+      .expect(200)
+      .expect((res) => {
+        expect(res.body._id).toBe(users[0]._id.toHexString());    // check that the _id of returned user is same as user array value.
+        expect(res.body.email).toBe(users[0].email);        // ensure email is expected.
+      })
+      .end(done);
+  });
+
+  it('should return 401 if not authenticated', (done) => {
+    request(app)
+      .get('/users/me')
+      .expect(401)
+      .expect((res) => {
+        expect(res.body).toEqual({});     // expect an empty object to return since we didn't pass in a jwt in the header.
+      })
+      .end(done);
+  });
+});
+
+describe('POST /users', () => {
+  it('should create a user', (done) => {
+    var email = 'example@example.com';
+    var password = '123mnb!';
+
+    request(app)
+      .post('/users')
+      .send({email,password})     // send the user data to the request
+      .expect(200)
+      .expect((res) => {
+        expect(res.headers['x-auth']).toExist();      // expect the jwt to be passed back.
+        expect(res.body._id).toExist();               // expect an id to be passed back.
+        expect(res.body.email).toBe(email);           // expect the email to be the same as the one passed in.
+      }).end((err) => {
+        if(err) {
+          return done(err);
+        }
+
+        // get user from database by email
+        User.findOne({email}).then((user) => {
+          expect(user).toExist();                      // user should exist.
+          expect(user.password).toNotBe(password);     // password should not be the same as the one above since we should hash it.
+          done();
+        })
+      })
+  });
+
+  it('should return validation errors if request invalid', (done) => {
+    var invalidEmail = 'invalidEmail';
+    var invalidPass = 'abc';
+
+    request(app)
+      .post('/users')
+      .send({invalidEmail, invalidPass})
+      .expect(400)
+      .end(done);
+  });
+
+  it('should not create user if email in use', (done) => {
+    var usedEmail = users[0].email;
+    var password = 'Password123!';
+
+    request(app)
+      .post('/users')
+      .send({usedEmail, password})
+      .expect(400)
+      .end(done);
+  });
+})
