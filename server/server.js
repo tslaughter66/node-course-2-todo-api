@@ -153,6 +153,23 @@ app.get('/users/me', authenticate, (req,res) => {
   res.send(req.user);
 });
 
+// POST - log in a user. /users/login {email, password}
+app.post('/users/login',(req,res) => {
+  // pick off email and possword
+  var body = _.pick(req.body, ['email','password']);
+
+  User.findByCredentials(body.email, body.password).then((user) => {
+    // user was found and correct password supplied, generate an auth token and return the user.
+    return user.generateAuthToken().then((token) => {
+      // put the auth token in the header and send back the user.
+      res.header('x-auth', token).send(user);
+    });
+  }).catch((e) => {
+    // could not find or validate user.
+    res.status(400).send();
+  });
+});
+
 // tell web app to start listening on the given port.
 app.listen(port, () => {
   console.log(`Started up at port ${port}`);

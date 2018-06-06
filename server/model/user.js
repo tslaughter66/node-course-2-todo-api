@@ -80,6 +80,32 @@ UserSchema.statics.findByToken = function (token) {
   });
 };
 
+UserSchema.statics.findByCredentials = function (email, password) {
+  // get user by email.
+  var User = this;        // get the user schema.
+
+  return User.findOne({email}).then((user) => {
+    if(!user) {
+      // If we couldn't find user, return Promise.reject.
+      return Promise.reject();
+    }
+
+    // Since bcrypt only works with callbacks, we need to wrap the method call in a new Promise()
+    return new Promise((resolve, reject) => {
+      // user was found, compare body.password with hashed password using bcrypt.compare
+      bcrypt.compare(password, user.password, (err, res) => {
+        if(res) {
+          // If response is true, resolve and send the user.
+          resolve(user);
+        } else {
+          // If response is false, wrong password was given.
+          reject();
+        }
+      });
+    });
+  })
+};
+
 // Mongoose middleware. "pre" means to run the code before a certain event (first parameter)
 UserSchema.pre('save', function (next) {
   var user = this;
