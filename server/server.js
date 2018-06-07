@@ -24,9 +24,10 @@ app.use(bodyParser.json());
 
 // POST - Create a new Todo from request body text. Send back 200 and new doc.
 // If error, send back 400 and error message.
-app.post('/todos',(req, res) => {
+app.post('/todos', authenticate, (req, res) => {
   var todo = new Todo({
-    text: req.body.text
+    text: req.body.text,
+    _creator: req.user._id    // user/token added to req by authenticate middleware.
   });
   todo.save().then((doc) => {
     res.send(doc);
@@ -36,10 +37,12 @@ app.post('/todos',(req, res) => {
 });
 
 // GET - return all todos.
-app.get('/todos', (req, res) => {
+app.get('/todos', authenticate, (req, res) => {
   // Get todos using the find() methods.
   // "then" promise requires two functions as arguments -> success case and failure case
-  Todo.find().then((todos) => {
+  Todo.find({
+    _creator: req.user._id    // Only fetch todos for the user.
+    }).then((todos) => {
     // instead of just passing back "todos" as an array, pass back an object with the todos array on it.
     // this future-proofs the call so that we can add more return values later if we want.
     res.send({todos});
@@ -50,7 +53,7 @@ app.get('/todos', (req, res) => {
 
 // GET - return a specific todo
 // using ":id" creates an id varible in the request object based on the parameters passed in the url
-app.get('/todos/:id', (req,res) => {
+app.get('/todos/:id', authenticate, (req,res) => {
   var id = req.params.id;         // get the id from the url request
 
   // validate Id using ObjectId.isValid. If not valid, return 404 and empty response.
@@ -58,8 +61,11 @@ app.get('/todos/:id', (req,res) => {
     return res.status(404).send();
   }
 
-  // use findById to get the todo.
-  Todo.findById(id).then((todo) => {
+  // use findOne to get the todo.
+  Todo.findOne({
+    _id: id,                  // Fetch todo by Id
+    _creator: req.user._id    // Only fetch todos for the user.
+  }).then((todo) => {
     // if no todo found - send back 404 with empty body
     if( !todo ) {
       return res.status(404).send();
@@ -72,7 +78,7 @@ app.get('/todos/:id', (req,res) => {
 });
 
 // DELETE = delete a specific todo.
-app.delete('/todos/:id', (req,res) => {
+app.delete('/todos/:id', authenticate, (req,res) => {
   var id = req.params.id;         // get the id from the url request
 
   // validate Id using ObjectId.isValid. If not valid, return 404 and empty response.
@@ -80,8 +86,11 @@ app.delete('/todos/:id', (req,res) => {
     return res.status(404).send();
   }
 
-  // use findByIdAndDelete to delete the todo.
-  Todo.findByIdAndRemove(id).then((todo) => {
+  // use findOneAndDelete to delete the todo.
+  Todo.findOneAndRemove({
+    _id: id,                  // Fetch todo by Id
+    _creator: req.user._id    // Only fetch todos for the user.
+  }).then((todo) => {
     // if no todo found - send back 404 with empty body
     if( !todo ) {
       return res.status(404).send();
@@ -94,7 +103,7 @@ app.delete('/todos/:id', (req,res) => {
 });
 
 // PATCH - update a todo.
-app.patch('/todos/:id', (req,res) => {
+app.patch('/todos/:id', authenticate, (req,res) => {
   var id = req.params.id;
   //use lodash module to get parameters from body. Only want user to be able to update some properties.
   var body = _.pick(req.body, ['text','completed']);
@@ -114,10 +123,10 @@ app.patch('/todos/:id', (req,res) => {
     body.completedAt = null;
   }
 
-  // Update the todo in the datbase.
+  // Update the todo in the database.
   // Pass in the body object since it now contains all fields we want to pass in.
   // "new" param means mongoose will return the updated todo.
-  Todo.findByIdAndUpdate(id, {$set: body}, {new: true}).then((todo) => {
+  Todo.findOneAndUpdate({_id: id, _creator: req.user._id}, {$set: body}, {new: true}).then((todo) => {
     // If todo doesn't exist, send 404
     if(!todo) {
       return res.status(404).send();
