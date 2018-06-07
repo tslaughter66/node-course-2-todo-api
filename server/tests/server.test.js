@@ -300,3 +300,23 @@ describe('POST /users/login', () => {
       });
   });
 });
+
+describe('DELETE /users/me/token', () => {
+  it('should remove auth token on log out.', (done) => {
+    request(app)
+      .delete('/users/me/token')
+      .set('x-auth',users[0].tokens[0].token)               // .set method sets values in the header.
+      .expect(200)
+      .end((err, res) => {
+        if(err) {
+          return done(err);
+        }
+
+        // Check that the user in the database has no token since we deleted it.
+        User.findById(users[0]._id).then((user) => {
+          expect(user.tokens.length).toBe(0);
+          done();
+        }).catch((e) => done(e));
+      });
+  });
+});
