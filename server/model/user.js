@@ -49,7 +49,7 @@ UserSchema.methods.generateAuthToken = function () {
   var user = this;      // get the this object.
   var access = 'auth';  // name the token.
   //create the jwt sign. Pass in the data you want to encrypt and the SALT.
-  var token = jwt.sign({_id: user._id.toHexString(), access},'abc123').toString();
+  var token = jwt.sign({_id: user._id.toHexString(), access}, process.env.JWT_SECRET).toString();
 
   // add the access and token onto the actual user token array.
   user.tokens = user.tokens.concat([{access, token}]);
@@ -80,7 +80,7 @@ UserSchema.statics.findByToken = function (token) {
 
   try {
     // try to get the verified token.
-    decoded = jwt.verify(token,'abc123');
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (e) {
     // If verify fails, send a reject promise. Whatever method calls this method will go to the "catch" in their method.
     return Promise.reject();
