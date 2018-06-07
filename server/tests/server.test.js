@@ -131,7 +131,7 @@ describe('DELETE /todos/:id',() => {
         }
 
         Todo.findById(hexId).then((todo) => {
-          expect(todo).toNotExist();    // check that the todo no longer exists
+          expect(todo).toBeFalsy();    // check that the todo no longer exists
           done();
         }).catch((e) => done(e));
       });
@@ -150,7 +150,7 @@ describe('DELETE /todos/:id',() => {
         }
 
         Todo.findById(hexId).then((todo) => {
-          expect(todo).toExist();    // check that the todo still exists since it shouldn't delete.
+          expect(todo).toBeTruthy();    // check that the todo still exists since it shouldn't delete.
           done();
         }).catch((e) => done(e));
       });
@@ -186,8 +186,8 @@ describe('PATCH /todos/:id', () => {
       .expect(200)
       .expect((res) => {
         expect(res.body.todo.text).toBe(updatedText);              // Check that text was updated.
-        expect(res.body.todo.completed).toBe(true);                // Check that completed was updated.
-        expect(res.body.todo.completedAt).toBeA('number');         // Check that completedAt is a number
+        expect(res.body.todo.completed).toBe(true);                // Check that completed was updated
+        expect(typeof res.body.todo.completedAt).toBe('number');   // Check that completedAt is a number
       })
       .end(done);
   });
@@ -216,7 +216,7 @@ describe('PATCH /todos/:id', () => {
       .expect((res) => {
         expect(res.body.todo.text).toBe(updatedText);              // Check that text was updated.
         expect(res.body.todo.completed).toBe(false);               // Check that completed was updated.
-        expect(res.body.todo.completedAt).toNotExist('number');    // Check that completedAt is a number
+        expect(res.body.todo.completedAt).toBeFalsy();    // Check that completedAt is a number
       })
       .end(done);
   });
@@ -256,8 +256,8 @@ describe('POST /users', () => {
       .send({email,password})     // send the user data to the request
       .expect(200)
       .expect((res) => {
-        expect(res.headers['x-auth']).toExist();      // expect the jwt to be passed back.
-        expect(res.body._id).toExist();               // expect an id to be passed back.
+        expect(res.headers['x-auth']).toBeTruthy();      // expect the jwt to be passed back.
+        expect(res.body._id).toBeTruthy();               // expect an id to be passed back.
         expect(res.body.email).toBe(email);           // expect the email to be the same as the one passed in.
       }).end((err) => {
         if(err) {
@@ -266,8 +266,8 @@ describe('POST /users', () => {
 
         // get user from database by email
         User.findOne({email}).then((user) => {
-          expect(user).toExist();                      // user should exist.
-          expect(user.password).toNotBe(password);     // password should not be the same as the one above since we should hash it.
+          expect(user).toBeTruthy();                      // user should exist.
+          expect(user.password).not.toBe(password);     // password should not be the same as the one above since we should hash it.
           done();
         }).catch((e) => done(e));
       });
@@ -307,7 +307,7 @@ describe('POST /users/login', () => {
       })
       .expect(200)
       .expect((res) => {
-        expect(res.headers['x-auth']).toExist();
+        expect(res.headers['x-auth']).toBeTruthy();
       })
       .end((err, res) => {
         if(err) {
@@ -316,7 +316,7 @@ describe('POST /users/login', () => {
 
         // Check that the user in database has updated token.
         User.findById(users[1]._id).then((user) => {
-          expect(user.tokens[1]).toInclude({
+          expect(user.toObject().tokens[1]).toMatchObject({
             access: 'auth',
             token: res.headers['x-auth']
           });
@@ -335,7 +335,7 @@ describe('POST /users/login', () => {
       })
       .expect(400)
       .expect((res) => {
-        expect(res.headers['x-auth']).toNotExist();
+        expect(res.headers['x-auth']).toBeFalsy();
       })
       .end((err, res) => {
         if(err) {
