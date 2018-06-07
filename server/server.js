@@ -170,6 +170,16 @@ app.post('/users/login',(req,res) => {
   });
 });
 
+// DELETE - log out a user.
+app.delete('/users/me/token', authenticate, (req,res) => {
+  // Call removeToken on the user. User and Token added to response by authenticate middleware.
+  req.user.removeToken(req.token).then(() => {
+    res.status(200).send();     // if successful
+  }, () => {
+    res.status(400).send();     // if not successful
+  });
+});
+
 // tell web app to start listening on the given port.
 app.listen(port, () => {
   console.log(`Started up at port ${port}`);

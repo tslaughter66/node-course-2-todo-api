@@ -60,6 +60,20 @@ UserSchema.methods.generateAuthToken = function () {
   });
 };
 
+// Delete a users token to log them out.
+UserSchema.methods.removeToken = function (token) {
+  var user = this;
+
+  return user.update({
+    // $pull is a mongodb operator that let's you remove items from an array that match criteria
+    // If something in the user's tokens array matches the passed in token, it will be removed by $pull.
+    // Removes entire token, including _id, access property, token property.
+    $pull: {
+      tokens: {token}
+    }
+  });
+};
+
 UserSchema.statics.findByToken = function (token) {
   var User = this;      // get the userSchema, not an individual user
   var decoded;
