@@ -219,8 +219,8 @@ describe('POST /users', () => {
           expect(user).toExist();                      // user should exist.
           expect(user.password).toNotBe(password);     // password should not be the same as the one above since we should hash it.
           done();
-        })
-      })
+        }).catch((e) => done(e));
+      });
   });
 
   it('should return validation errors if request invalid', (done) => {
@@ -245,3 +245,58 @@ describe('POST /users', () => {
       .end(done);
   });
 })
+
+describe('POST /users/login', () => {
+  it('should login user and return auth token.', (done) => {
+    request(app)
+      .post('/users/login')
+      .send({
+        // use user from the seed data
+        email: users[1].email,
+        password: users[1].password
+      })
+      .expect(200)
+      .expect((res) => {
+        expect(res.headers['x-auth']).toExist();
+      })
+      .end((err, res) => {
+        if(err) {
+          return done(err);
+        }
+
+        // Check that the user in database has updated token.
+        User.findById(users[1]._id).then((user) => {
+          expect(user.tokens[0]).toInclude({
+            access: 'auth',
+            token: res.headers['x-auth']
+          });
+          done();
+        }).catch((e) => done(e));
+      });
+  });
+
+  it('should reject invalid login.', (done) => {
+    request(app)
+      .post('/users/login')
+      .send({
+        // use user from the seed data
+        email: users[1].email,
+        password: 'INCORRECT_PASSWORD'      // Login should fail since we are using incorrect password.
+      })
+      .expect(400)
+      .expect((res) => {
+        expect(res.headers['x-auth']).toNotExist();
+      })
+      .end((err, res) => {
+        if(err) {
+          return done(err);
+        }
+
+        // Check that the user in database has no token since one was not created with failed login (and seed data doesn't have token).
+        User.findById(users[1]._id).then((user) => {
+          expect(user.tokens.length).toBe(0);
+          done();
+        }).catch((e) => done(e));
+      });
+  });
+});
