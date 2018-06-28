@@ -8,7 +8,7 @@ const bodyParser = require('body-parser');
 const {ObjectId} = require('mongodb');
 
 // Require - local
-// mongod.exe --dbpath /Users/Tim/mongo-data
+// Run from : C:/Program Files/MongoDb/Server/3.6/bin. mongod.exe --dbpath /Users/Tim/mongo-data
 var {mongoose} = require('./db/mongoose.js');
 var {Todo} = require('./model/todo');
 var {User} = require('./model/user');
@@ -78,28 +78,42 @@ app.get('/todos/:id', authenticate, (req,res) => {
 });
 
 // DELETE = delete a specific todo.
-app.delete('/todos/:id', authenticate, (req,res) => {
-  var id = req.params.id;         // get the id from the url request
+app.delete('/todos/:id', authenticate, async (req,res) => {
+  const id = req.params.id;         // get the id from the url request
 
   // validate Id using ObjectId.isValid. If not valid, return 404 and empty response.
   if( !ObjectId.isValid(id) ) {
     return res.status(404).send();
   }
 
-  // use findOneAndDelete to delete the todo.
-  Todo.findOneAndRemove({
-    _id: id,                  // Fetch todo by Id
-    _creator: req.user._id    // Only fetch todos for the user.
-  }).then((todo) => {
-    // if no todo found - send back 404 with empty body
-    if( !todo ) {
+  try {
+    // Fetch todo by id and creator.
+    const todo = await Todo.findOneAndRemove({_id: id, _creator: req.user._id});
+    // if no todo found, throw an error.
+    if(!todo) {
       return res.status(404).send();
     }
     // if the todo exists, send it back.
     res.send({todo});
-  }).catch((e) => {
-    res.status(400).send();// error with find. send back 400 and empty response
-  });
+  } catch (e) {
+    // error with find. send back 400 and empty response
+    res.status(400).send();
+  }
+
+  // // use findOneAndDelete to delete the todo.
+  // Todo.findOneAndRemove({
+  //   _id: id,                  // Fetch todo by Id
+  //   _creator: req.user._id    // Only fetch todos for the user.
+  // }).then((todo) => {
+  //   // if no todo found - send back 404 with empty body
+  //   if( !todo ) {
+  //     return res.status(404).send();
+  //   }
+  //   // if the todo exists, send it back.
+  //   res.send({todo});
+  // }).catch((e) => {
+  //   res.status(400).send();// error with find. send back 400 and empty response
+  // });
 });
 
 // PATCH - update a todo.
@@ -140,20 +154,17 @@ app.patch('/todos/:id', authenticate, (req,res) => {
 });
 
 // POST - create a new user.
-app.post('/users',(req,res) => {
-  var body = _.pick(req.body, ['email', 'password']);
-  var user = new User(body);
+app.post('/users', async (req,res) => {
+  try {
+    const body = _.pick(req.body, ['email', 'password']);
+    const user = new User(body);
 
-  user.save().then(() => {
-    // generate the authToken.
-    return user.generateAuthToken();
-  }).then((token) => {
-    // generateAuthToken returns a promise.
-    // In the response header, send back the token.
-    res.header('x-auth', token).send(user);
-  }).catch((e) => {
+    await user.save();
+    const token = await user.generateAuthToken(); // generate the authToken.
+    res.header('x-auth', token).send(user);       // In the response header, send back the token
+  } catch (e) {
     res.status(400).send(e);
-  })
+  }
 });
 
 // GET - get a user based on a passed in authToken
@@ -163,30 +174,28 @@ app.get('/users/me', authenticate, (req,res) => {
 });
 
 // POST - log in a user. /users/login {email, password}
-app.post('/users/login',(req,res) => {
-  // pick off email and possword
-  var body = _.pick(req.body, ['email','password']);
-
-  User.findByCredentials(body.email, body.password).then((user) => {
-    // user was found and correct password supplied, generate an auth token and return the user.
-    return user.generateAuthToken().then((token) => {
-      // put the auth token in the header and send back the user.
-      res.header('x-auth', token).send(user);
-    });
-  }).catch((e) => {
+app.post('/users/login', async (req,res) => {
+  try {
+    // pick off email and possword
+    const body = _.pick(req.body, ['email','password']);
+    const user = await User.findByCredentials(body.email, body.password);
+    const token = await user.generateAuthToken();
+    res.header('x-auth', token).send(user);
+  } catch (e) {
     // could not find or validate user.
     res.status(400).send();
-  });
+  }
 });
 
 // DELETE - log out a user.
-app.delete('/users/me/token', authenticate, (req,res) => {
+app.delete('/users/me/token', authenticate,  async (req,res) => {
   // Call removeToken on the user. User and Token added to response by authenticate middleware.
-  req.user.removeToken(req.token).then(() => {
+  try {
+    await req.user.removeToken(req.token);
     res.status(200).send();     // if successful
-  }, () => {
+  } catch (e) {
     res.status(400).send();     // if not successful
-  });
+  }
 });
 
 // tell web app to start listening on the given port.
